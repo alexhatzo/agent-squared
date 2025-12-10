@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "agent-squared": {
+      "command": "python",
+      "args": ["/path/to/agent-squared/mcp/mcp_server.py"],
+      "env": {
+        "CURSOR_API_KEY": "API_KEY_HERE"
+      }
+    }
+  }
+}

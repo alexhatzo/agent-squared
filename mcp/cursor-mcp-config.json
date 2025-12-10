@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "agent-squared": {
+      "command": "python",
+      "args": ["/Users/alexandros/Desktop/GitHub/agent-squared/mcp_server.py"],
+      "env": {}
+    }
+  }
+}
+

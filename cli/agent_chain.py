@@ -23,21 +23,21 @@ from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 
 # Agent definitions mapping
-# Agent definitions - paths relative to this script's directory
+# Agent definitions - paths relative to project root (parent of cli/)
 AGENTS = {
     "frontend": {
         "name": "frontend-developer",
-        "file": "agents/front-end-dev.md",
+        "file": "../agents/front-end-dev.md",
         "model": "composer-1"
     },
     "backend": {
         "name": "backend-architect",
-        "file": "agents/backend-architect.md",
+        "file": "../agents/backend-architect.md",
         "model": "composer-1"
     },
     "cloud": {
         "name": "cloud-architect",
-        "file": "agents/cloud-architect.md",
+        "file": "../agents/cloud-architect.md",
         "model": "composer-1"
     },
     "full-stack": {
@@ -49,13 +49,13 @@ AGENTS = {
 
 SPLITTER_AGENT = {
     "name": "splitter-agent",
-    "file": "agents/splitter-agent.md",
+    "file": "../agents/splitter-agent.md",
     "model": "composer-1"
 }
 
 PROMPT_ENGINEER_AGENT = {
     "name": "prompt-engineer",
-    "file": "agents/prompt-engineer.md",
+    "file": "../agents/prompt-engineer.md",
     "model": "composer-1"
 }
 
@@ -63,42 +63,42 @@ PROMPT_ENGINEER_AGENT = {
 ADDITIONAL_AGENTS = {
     "code-reviewer": {
         "name": "code-reviewer",
-        "file": "agents/code-reviewer.md",
+        "file": "../agents/code-reviewer.md",
         "model": "composer-1"
     },
     "python-pro": {
         "name": "python-pro",
-        "file": "agents/python-pro.md",
+        "file": "../agents/python-pro.md",
         "model": "composer-1"
     },
     "ui-ux-designer": {
         "name": "ui-ux-designer",
-        "file": "agents/ui-ux-designer.md",
+        "file": "../agents/ui-ux-designer.md",
         "model": "composer-1"
     },
     "security-engineer": {
         "name": "security-engineer",
-        "file": "agents/security-engineer.md",
+        "file": "../agents/security-engineer.md",
         "model": "composer-1"
     },
     "ai-engineer": {
         "name": "ai-engineer",
-        "file": "agents/ai-engineer.md",
+        "file": "../agents/ai-engineer.md",
         "model": "composer-1"
     },
     "data-engineer": {
         "name": "data-engineer",
-        "file": "agents/data-engineer.md",
+        "file": "../agents/data-engineer.md",
         "model": "composer-1"
     },
     "deployment-engineer": {
         "name": "deployment-engineer",
-        "file": "agents/deployment-engineer.md",
+        "file": "../agents/deployment-engineer.md",
         "model": "composer-1"
     },
     "composer": {
         "name": "composer",
-        "file": "agents/composer.md",
+        "file": "../agents/composer.md",
         "model": "composer-1"
     }
 }
@@ -106,7 +106,7 @@ ADDITIONAL_AGENTS = {
 # Composer agent for multi-agent integration validation
 COMPOSER_AGENT = {
     "name": "composer",
-    "file": "agents/composer.md",
+    "file": "../agents/composer.md",
     "model": "composer-1"
 }
 
@@ -359,14 +359,14 @@ Be detailed and specific about what needs to be built."""
         return None
     
     # Create plans directory if it doesn't exist
-    # Use agent-squared/plans if running from agent-squared, otherwise .cursor/plans
+    # Plans dir is at project root (parent of cli/)
     script_dir = Path(__file__).parent.resolve()
+    project_root = script_dir.parent  # Go up from cli/ to agent-squared/
+    
     if workspace_dir and (workspace_dir / "plans").exists():
         plans_dir = workspace_dir / "plans"
-    elif script_dir.name == "agent-squared":
-        plans_dir = script_dir / "plans"
     else:
-        plans_dir = workspace_dir / ".cursor" / "plans" if workspace_dir else script_dir / "plans"
+        plans_dir = project_root / "plans"
     plans_dir.mkdir(parents=True, exist_ok=True)
     
     # Generate plan filename

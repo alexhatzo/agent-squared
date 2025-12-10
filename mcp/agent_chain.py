@@ -18,26 +18,72 @@ import sys
 import os
 import argparse
 import uuid
+import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 
+# MCP mode flag - when True, all _print() output goes to stderr to avoid
+# corrupting the MCP JSON-RPC protocol on stdout
+_MCP_MODE = False
+
+
+def set_mcp_mode(enabled: bool = True):
+    """Enable or disable MCP mode. When enabled, prints go to stderr."""
+    global _MCP_MODE
+    _MCP_MODE = enabled
+
+
+def _print(*args, **kwargs):
+    """Print wrapper that redirects to stderr when in MCP mode."""
+    if _MCP_MODE:
+        kwargs['file'] = sys.stderr
+    print(*args, **kwargs)
+
+
+def find_cursor_agent() -> str:
+    """
+    Find the cursor-agent executable.
+    Checks PATH first, then common installation locations.
+    Returns the path to cursor-agent or raises FileNotFoundError.
+    """
+    # First try PATH
+    cursor_agent_path = shutil.which("cursor-agent")
+    if cursor_agent_path:
+        return cursor_agent_path
+    
+    # Check common installation locations
+    common_paths = [
+        os.path.expanduser("~/.local/bin/cursor-agent"),
+        os.path.expanduser("~/.cursor/bin/cursor-agent"),
+        "/usr/local/bin/cursor-agent",
+    ]
+    
+    for path in common_paths:
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+    
+    raise FileNotFoundError(
+        "cursor-agent not found. Install with: curl https://cursor.com/install -fsS | bash"
+    )
+
+
 # Agent definitions mapping
-# Agent definitions - paths relative to this script's directory
+# Agent definitions - paths relative to project root (parent of mcp/)
 AGENTS = {
     "frontend": {
         "name": "frontend-developer",
-        "file": "agents/front-end-dev.md",
+        "file": "../agents/front-end-dev.md",
         "model": "composer-1"
     },
     "backend": {
         "name": "backend-architect",
-        "file": "agents/backend-architect.md",
+        "file": "../agents/backend-architect.md",
         "model": "composer-1"
     },
     "cloud": {
         "name": "cloud-architect",
-        "file": "agents/cloud-architect.md",
+        "file": "../agents/cloud-architect.md",
         "model": "composer-1"
     },
     "full-stack": {
@@ -49,13 +95,13 @@ AGENTS = {
 
 SPLITTER_AGENT = {
     "name": "splitter-agent",
-    "file": "agents/splitter-agent.md",
+    "file": "../agents/splitter-agent.md",
     "model": "composer-1"
 }
 
 PROMPT_ENGINEER_AGENT = {
     "name": "prompt-engineer",
-    "file": "agents/prompt-engineer.md",
+    "file": "../agents/prompt-engineer.md",
     "model": "composer-1"
 }
 
@@ -63,42 +109,42 @@ PROMPT_ENGINEER_AGENT = {
 ADDITIONAL_AGENTS = {
     "code-reviewer": {
         "name": "code-reviewer",
-        "file": "agents/code-reviewer.md",
+        "file": "../agents/code-reviewer.md",
         "model": "composer-1"
     },
     "python-pro": {
         "name": "python-pro",
-        "file": "agents/python-pro.md",
+        "file": "../agents/python-pro.md",
         "model": "composer-1"
     },
     "ui-ux-designer": {
         "name": "ui-ux-designer",
-        "file": "agents/ui-ux-designer.md",
+        "file": "../agents/ui-ux-designer.md",
         "model": "composer-1"
     },
     "security-engineer": {
         "name": "security-engineer",
-        "file": "agents/security-engineer.md",
+        "file": "../agents/security-engineer.md",
         "model": "composer-1"
     },
     "ai-engineer": {
         "name": "ai-engineer",
-        "file": "agents/ai-engineer.md",
+        "file": "../agents/ai-engineer.md",
         "model": "composer-1"
     },
     "data-engineer": {
         "name": "data-engineer",
-        "file": "agents/data-engineer.md",
+        "file": "../agents/data-engineer.md",
         "model": "composer-1"
     },
     "deployment-engineer": {
         "name": "deployment-engineer",
-        "file": "agents/deployment-engineer.md",
+        "file": "../agents/deployment-engineer.md",
         "model": "composer-1"
     },
     "composer": {
         "name": "composer",
-        "file": "agents/composer.md",
+        "file": "../agents/composer.md",
         "model": "composer-1"
     }
 }
@@ -106,7 +152,7 @@ ADDITIONAL_AGENTS = {
 # Composer agent for multi-agent integration validation
 COMPOSER_AGENT = {
     "name": "composer",
-    "file": "agents/composer.md",
+    "file": "../agents/composer.md",
     "model": "composer-1"
 }
 
@@ -131,54 +177,72 @@ def run_cursor_agent_detailed(prompt: str, agent_context: Optional[str] = None, 
     Returns:
         Tuple of (stdout, stderr, return_code)
     """
-    cmd = ["cursor", "agent"]
+    # Find cursor-agent executable
+    try:
+        cursor_agent_path = find_cursor_agent()
+    except FileNotFoundError as e:
+        return "", str(e), -2
     
-    if print_output:
-        cmd.append("--print")
-        cmd.extend(["--output-format", output_format])
+    cmd = [cursor_agent_path]
     
-    cmd.extend(["--model", model])
-    cmd.append("--force")  # Auto-approve commands
+    # Pass API key explicitly if set (in addition to env var)
+    api_key = os.environ.get("CURSOR_API_KEY")
+    if api_key:
+        cmd.extend(["--api-key", api_key])
     
     # Build the full prompt with agent context
     full_prompt = prompt
     if agent_context:
         full_prompt = f"{agent_context}\n\nUser Request: {prompt}"
     
-    cmd.append(full_prompt)
+    if print_output:
+        # Syntax per docs: cursor-agent -p "prompt" --output-format text
+        cmd.extend(["-p", full_prompt])
+        cmd.extend(["--output-format", output_format])
+    else:
+        # Interactive mode uses positional prompt
+        cmd.append(full_prompt)
+    
+    cmd.extend(["--model", model])
+    cmd.append("--force")  # Auto-approve commands
     
     if verbose:
-        print(f"[DEBUG] Running: cursor agent --print ... (timeout={timeout}s)", file=sys.stderr)
+        _print(f"[DEBUG] Running: cursor agent --api-key *** --print ... (timeout={timeout}s)", file=sys.stderr)
     
     try:
         # Run from workspace directory so agent has access to codebase
         cwd = str(workspace_dir) if workspace_dir else None
         
+        # Suppress stderr to avoid JSON parsing errors in MCP client
+        # The cursor-agent CLI outputs progress/streaming messages to stderr
+        # that the MCP protocol tries to parse as JSON
         result = subprocess.run(
             cmd,
-            capture_output=True,
+            stdin=subprocess.DEVNULL,  # Prevent hanging on stdin reads (critical for MCP)
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,  # Suppress stderr to fix MCP JSON parsing errors
             text=True,
             timeout=timeout,
             cwd=cwd  # Set working directory for codebase context
         )
         
         if result.returncode != 0:
-            if verbose or result.stderr:
-                print(f"Error running cursor agent (code {result.returncode}): {result.stderr}", file=sys.stderr)
+            if verbose:
+                _print(f"Error running cursor agent (code {result.returncode})", file=sys.stderr)
         
-        return result.stdout, result.stderr, result.returncode
+        return result.stdout, "", result.returncode  # stderr suppressed
         
     except subprocess.TimeoutExpired:
         error_msg = f"Agent execution timed out after {timeout} seconds"
-        print(f"Error: {error_msg}", file=sys.stderr)
+        _print(f"Error: {error_msg}", file=sys.stderr)
         return "", error_msg, -1
     except FileNotFoundError:
         error_msg = "Cursor CLI not found. Is 'cursor' in PATH? Run: cursor --version"
-        print(f"Error: {error_msg}", file=sys.stderr)
+        _print(f"Error: {error_msg}", file=sys.stderr)
         return "", error_msg, -2
     except Exception as e:
         error_msg = f"Error running cursor agent: {str(e)}"
-        print(f"Error: {error_msg}", file=sys.stderr)
+        _print(f"Error: {error_msg}", file=sys.stderr)
         return "", error_msg, -3
 
 
@@ -218,7 +282,7 @@ def load_agent_instructions(agent_file: str, workspace_dir: Optional[Path] = Non
                     return parts[2].strip()
             return content
     except Exception as e:
-        print(f"Warning: Could not load agent file {agent_file}: {e}", file=sys.stderr)
+        _print(f"Warning: Could not load agent file {agent_file}: {e}", file=sys.stderr)
     return ""
 
 
@@ -229,7 +293,7 @@ def split_task(initial_prompt: str, workspace_dir: Optional[Path] = None) -> Dic
     Returns:
         Dictionary with splitter analysis (agents_needed, execution_strategy, etc.)
     """
-    print("🔀 Phase 0: Analyzing task with Splitter agent...")
+    _print("🔀 Phase 0: Analyzing task with Splitter agent...")
     
     # Load splitter agent instructions
     splitter_instructions = load_agent_instructions(SPLITTER_AGENT["file"], workspace_dir)
@@ -256,11 +320,11 @@ Make sure to output ONLY valid JSON, no markdown formatting."""
         workspace_dir=workspace_dir
     )
     
-    print("\n" + "="*80)
-    print("SPLITTER AGENT OUTPUT:")
-    print("="*80)
-    print(output)
-    print("="*80 + "\n")
+    _print("\n" + "="*80)
+    _print("SPLITTER AGENT OUTPUT:")
+    _print("="*80)
+    _print(output)
+    _print("="*80 + "\n")
     
     # Try to extract JSON from output
     splitter_result = None
@@ -275,7 +339,7 @@ Make sure to output ONLY valid JSON, no markdown formatting."""
     
     # Fallback: if no JSON found, assume single agent
     if not splitter_result:
-        print("⚠️  Could not parse splitter JSON. Defaulting to single agent workflow.")
+        _print("⚠️  Could not parse splitter JSON. Defaulting to single agent workflow.")
         splitter_result = {
             "requires_multiple_agents": False,
             "agents_needed": [],
@@ -302,9 +366,9 @@ def create_plan(prompt: str, workspace_dir: Optional[Path] = None, agent_name: O
         Path to the created plan file, or None if creation failed
     """
     if agent_name:
-        print(f"📋 Creating plan for {agent_name} agent...")
+        _print(f"📋 Creating plan for {agent_name} agent...")
     else:
-        print("📋 Creating plan document...")
+        _print("📋 Creating plan document...")
     
     # Load prompt engineer instructions
     prompt_engineer_instructions = load_agent_instructions(PROMPT_ENGINEER_AGENT["file"], workspace_dir)
@@ -355,18 +419,18 @@ Be detailed and specific about what needs to be built."""
     )
     
     if not output.strip():
-        print("⚠️  Failed to generate plan content.")
+        _print("⚠️  Failed to generate plan content.")
         return None
     
     # Create plans directory if it doesn't exist
-    # Use agent-squared/plans if running from agent-squared, otherwise .cursor/plans
+    # Plans dir is at project root (parent of mcp/)
     script_dir = Path(__file__).parent.resolve()
+    project_root = script_dir.parent  # Go up from mcp/ to agent-squared/
+    
     if workspace_dir and (workspace_dir / "plans").exists():
         plans_dir = workspace_dir / "plans"
-    elif script_dir.name == "agent-squared":
-        plans_dir = script_dir / "plans"
     else:
-        plans_dir = workspace_dir / ".cursor" / "plans" if workspace_dir else script_dir / "plans"
+        plans_dir = project_root / "plans"
     plans_dir.mkdir(parents=True, exist_ok=True)
     
     # Generate plan filename
@@ -405,10 +469,10 @@ Be detailed and specific about what needs to be built."""
     
     try:
         plan_path.write_text(plan_content)
-        print(f"✅ Plan created: {plan_path}")
+        _print(f"✅ Plan created: {plan_path}")
         return plan_path
     except Exception as e:
-        print(f"⚠️  Failed to save plan: {e}", file=sys.stderr)
+        _print(f"⚠️  Failed to save plan: {e}", file=sys.stderr)
         return None
 
 
@@ -559,10 +623,10 @@ def interactive_clarification(initial_prompt: str, workspace_dir: Optional[Path]
     Returns:
         Refined prompt with all answers incorporated
     """
-    print("💬 Phase 0.5: Interactive Clarification...")
-    print("="*80)
-    print("The prompt engineer will ask clarifying questions to refine your prompt.")
-    print("Answer each question, or type 'build' when ready to proceed.\n")
+    _print("💬 Phase 0.5: Interactive Clarification...")
+    _print("="*80)
+    _print("The prompt engineer will ask clarifying questions to refine your prompt.")
+    _print("Answer each question, or type 'build' when ready to proceed.\n")
     
     accumulated_answers = {}
     current_prompt = initial_prompt
@@ -584,15 +648,15 @@ def interactive_clarification(initial_prompt: str, workspace_dir: Optional[Path]
                 if accumulated_answers:
                     # Check if we have enough info
                     if has_enough_info(current_prompt, accumulated_answers, workspace_dir):
-                        print("✅ Prompt engineer has enough information to proceed.\n")
+                        _print("✅ Prompt engineer has enough information to proceed.\n")
                         break
                     else:
-                        print("⚠️  No more questions, but information may still be incomplete.")
-                        print("Type 'build' to proceed anyway, or provide additional context.\n")
+                        _print("⚠️  No more questions, but information may still be incomplete.")
+                        _print("Type 'build' to proceed anyway, or provide additional context.\n")
                         # Get user input to proceed or provide more context
                         user_input = input("Your response (or 'build' to proceed): ").strip()
                         if user_input.lower() == "build":
-                            print("\n🚀 Proceeding with current information...\n")
+                            _print("\n🚀 Proceeding with current information...\n")
                             break
                         elif user_input:
                             # User provided additional context, incorporate it
@@ -601,34 +665,34 @@ def interactive_clarification(initial_prompt: str, workspace_dir: Optional[Path]
                             for question, answer in accumulated_answers.items():
                                 answers_section += f"- {question}: {answer}\n"
                             current_prompt = f"{initial_prompt}{answers_section}"
-                            print(f"✅ Additional context recorded.\n")
+                            _print(f"✅ Additional context recorded.\n")
                             continue  # Continue loop to generate new questions
                         else:
                             # Empty input, proceed anyway
-                            print("Proceeding with current information...\n")
+                            _print("Proceeding with current information...\n")
                             break
                 else:
                     # No questions needed at all
-                    print("✅ No clarification needed. Prompt is clear and complete.\n")
+                    _print("✅ No clarification needed. Prompt is clear and complete.\n")
                     break
             
             # Display questions
             if questions:
-                print(f"\n📋 Round {round_number} - Questions:")
-                print("-" * 80)
+                _print(f"\n📋 Round {round_number} - Questions:")
+                _print("-" * 80)
                 for i, question in enumerate(questions, 1):
-                    print(f"{i}. {question}")
-                print("-" * 80)
+                    _print(f"{i}. {question}")
+                _print("-" * 80)
                 if analysis:
-                    print(f"\n💡 Analysis: {analysis}\n")
-                print("(Type 'build' when ready to proceed, or provide your answers)\n")
+                    _print(f"\n💡 Analysis: {analysis}\n")
+                _print("(Type 'build' when ready to proceed, or provide your answers)\n")
             
             # Get user input
             user_input = input("Your response: ").strip()
             
             # Check if user wants to proceed
             if user_input.lower() == "build":
-                print("\n🚀 Proceeding with current information...\n")
+                _print("\n🚀 Proceeding with current information...\n")
                 break
             
             # If user provided input, store answers
@@ -644,9 +708,9 @@ def interactive_clarification(initial_prompt: str, workspace_dir: Optional[Path]
                     answers_section += f"- {question}: {answer}\n"
                 
                 current_prompt = f"{initial_prompt}{answers_section}"
-                print(f"✅ Answer recorded. ({len(questions)} question(s) answered, {len(accumulated_answers)} total clarification(s))\n")
+                _print(f"✅ Answer recorded. ({len(questions)} question(s) answered, {len(accumulated_answers)} total clarification(s))\n")
             else:
-                print("⚠️  Empty input. Please provide an answer or type 'build' to proceed.\n")
+                _print("⚠️  Empty input. Please provide an answer or type 'build' to proceed.\n")
         
         # Build final refined prompt
         if accumulated_answers:
@@ -657,12 +721,12 @@ def interactive_clarification(initial_prompt: str, workspace_dir: Optional[Path]
         else:
             refined_prompt = initial_prompt
         
-        print("="*80)
+        _print("="*80)
         return refined_prompt
         
     except KeyboardInterrupt:
-        print("\n\n⚠️  Clarification interrupted by user.")
-        print("Proceeding with current information...\n")
+        _print("\n\n⚠️  Clarification interrupted by user.")
+        _print("Proceeding with current information...\n")
         # Build prompt with what we have
         if accumulated_answers:
             answers_section = "\n\n### Clarifications:\n"
@@ -679,7 +743,7 @@ def perfect_prompt(initial_prompt: str, workspace_dir: Optional[Path] = None) ->
     Returns:
         Tuple of (perfected_prompt, category)
     """
-    print("🔧 Phase 1: Perfecting prompt with Prompt Engineer agent...")
+    _print("🔧 Phase 1: Perfecting prompt with Prompt Engineer agent...")
     
     # Load prompt engineer instructions
     prompt_engineer_instructions = load_agent_instructions(PROMPT_ENGINEER_AGENT["file"], workspace_dir)
@@ -717,11 +781,11 @@ Reason: [Brief explanation]
         workspace_dir=workspace_dir
     )
     
-    print("\n" + "="*80)
-    print("PROMPT ENGINEER OUTPUT:")
-    print("="*80)
-    print(output)
-    print("="*80 + "\n")
+    _print("\n" + "="*80)
+    _print("PROMPT ENGINEER OUTPUT:")
+    _print("="*80)
+    _print(output)
+    _print("="*80 + "\n")
     
     # Parse output to extract perfected prompt and category
     perfected_prompt = initial_prompt  # Fallback
@@ -774,12 +838,16 @@ def execute_agent(agent_name: str, prompt: str, focus: str = "", interactive: bo
         agent_config = ADDITIONAL_AGENTS[agent_name]
     
     if not agent_config:
-        print(f"⚠️  Unknown agent: {agent_name}. Using default agent.")
+        _print(f"⚠️  Unknown agent: {agent_name}. Using default agent.")
         if interactive:
-            subprocess.run(
-                ["cursor", "agent", full_prompt],
-                cwd=str(workspace_dir) if workspace_dir else None
-            )
+            try:
+                cursor_agent = find_cursor_agent()
+                subprocess.run(
+                    [cursor_agent, full_prompt],
+                    cwd=str(workspace_dir) if workspace_dir else None
+                )
+            except FileNotFoundError as e:
+                _print(f"Error: {e}", file=sys.stderr)
             return ""
         else:
             return run_cursor_agent(full_prompt, workspace_dir=workspace_dir)
@@ -788,11 +856,15 @@ def execute_agent(agent_name: str, prompt: str, focus: str = "", interactive: bo
     agent_instructions = load_agent_instructions(agent_config["file"], workspace_dir)
     
     if interactive:
-        print(f"Opening {agent_config['name']} agent in Cursor...")
-        subprocess.run(
-            ["cursor", "agent", "--model", agent_config["model"], full_prompt],
-            cwd=str(workspace_dir) if workspace_dir else None
-        )
+        _print(f"Opening {agent_config['name']} agent in Cursor...")
+        try:
+            cursor_agent = find_cursor_agent()
+            subprocess.run(
+                [cursor_agent, "--model", agent_config["model"], full_prompt],
+                cwd=str(workspace_dir) if workspace_dir else None
+            )
+        except FileNotFoundError as e:
+            _print(f"Error: {e}", file=sys.stderr)
         return ""
     else:
         output = run_cursor_agent(
@@ -801,11 +873,11 @@ def execute_agent(agent_name: str, prompt: str, focus: str = "", interactive: bo
             model=agent_config["model"],
             workspace_dir=workspace_dir
         )
-        print("\n" + "="*80)
-        print(f"{agent_config['name'].upper().replace('-', ' ')} OUTPUT:")
-        print("="*80)
-        print(output)
-        print("="*80 + "\n")
+        _print("\n" + "="*80)
+        _print(f"{agent_config['name'].upper().replace('-', ' ')} OUTPUT:")
+        _print("="*80)
+        _print(output)
+        _print("="*80 + "\n")
         return output
 
 
@@ -822,13 +894,13 @@ def execute_multiple_agents(splitter_result: Dict, perfected_prompt: str,
         workspace_dir: Workspace directory
         create_plans: Whether to create a plan for each agent before execution
     """
-    print(f"\n🚀 Phase 2: Executing with {len(splitter_result.get('execution_order', []))} agent(s)...\n")
-    print(f"Strategy: {splitter_result.get('execution_strategy', 'sequential')}\n")
+    _print(f"\n🚀 Phase 2: Executing with {len(splitter_result.get('execution_order', []))} agent(s)...\n")
+    _print(f"Strategy: {splitter_result.get('execution_strategy', 'sequential')}\n")
     
     execution_order = splitter_result.get("execution_order", [])
     
     if not execution_order:
-        print("⚠️  No execution order specified. Using default single agent.")
+        _print("⚠️  No execution order specified. Using default single agent.")
         execute_with_specialist(perfected_prompt, "other", interactive, workspace_dir)
         return
     
@@ -838,12 +910,12 @@ def execute_multiple_agents(splitter_result: Dict, perfected_prompt: str,
         agent_focus = agent_plan.get("focus", "")
         agent_reason = agent_plan.get("reason", "")
         
-        print(f"\n{'='*80}")
-        print(f"Agent {i}/{len(execution_order)}: {agent_name}")
-        print(f"Reason: {agent_reason}")
+        _print(f"\n{'='*80}")
+        _print(f"Agent {i}/{len(execution_order)}: {agent_name}")
+        _print(f"Reason: {agent_reason}")
         if agent_focus:
-            print(f"Focus: {agent_focus}")
-        print(f"{'='*80}\n")
+            _print(f"Focus: {agent_focus}")
+        _print(f"{'='*80}\n")
         
         # Create plan for this agent before execution (if requested)
         if create_plans:
@@ -858,7 +930,7 @@ def execute_multiple_agents(splitter_result: Dict, perfected_prompt: str,
                 focus=agent_focus
             )
             if plan_path:
-                print(f"📄 Plan saved for {agent_name} agent\n")
+                _print(f"📄 Plan saved for {agent_name} agent\n")
         
         # Build prompt for this agent
         agent_prompt = perfected_prompt
@@ -869,7 +941,7 @@ def execute_multiple_agents(splitter_result: Dict, perfected_prompt: str,
         
         # If sequential, wait for this agent to complete before next
         if splitter_result.get("execution_strategy") == "sequential" and i < len(execution_order):
-            print("\n⏳ Waiting for agent to complete before proceeding to next...\n")
+            _print("\n⏳ Waiting for agent to complete before proceeding to next...\n")
     
     # Phase 3: Run composer agent to validate integration (if multiple agents were used)
     if len(execution_order) > 1:
@@ -895,10 +967,10 @@ def compose_integration(agents_used: List[str], original_prompt: str,
     Returns:
         Composer agent output
     """
-    print("\n" + "="*80)
-    print("🎼 Phase 3: Running Composer Agent for Integration Validation")
-    print("="*80)
-    print(f"Validating integration between: {', '.join(agents_used)}\n")
+    _print("\n" + "="*80)
+    _print("🎼 Phase 3: Running Composer Agent for Integration Validation")
+    _print("="*80)
+    _print(f"Validating integration between: {', '.join(agents_used)}\n")
     
     # Load composer agent instructions
     composer_instructions = load_agent_instructions(COMPOSER_AGENT["file"], workspace_dir)
@@ -923,11 +995,15 @@ Start by examining recent changes (git diff or read modified files), then valida
 Output a clear integration report showing what was validated and any fixes made."""
     
     if interactive:
-        print("Opening composer agent in Cursor...")
-        subprocess.run(
-            ["cursor", "agent", "--model", COMPOSER_AGENT["model"], composer_prompt],
-            cwd=str(workspace_dir) if workspace_dir else None
-        )
+        _print("Opening composer agent in Cursor...")
+        try:
+            cursor_agent = find_cursor_agent()
+            subprocess.run(
+                [cursor_agent, "--model", COMPOSER_AGENT["model"], composer_prompt],
+                cwd=str(workspace_dir) if workspace_dir else None
+            )
+        except FileNotFoundError as e:
+            _print(f"Error: {e}", file=sys.stderr)
         return ""
     else:
         output = run_cursor_agent(
@@ -936,11 +1012,11 @@ Output a clear integration report showing what was validated and any fixes made.
             model=COMPOSER_AGENT["model"],
             workspace_dir=workspace_dir
         )
-        print("\n" + "="*80)
-        print("COMPOSER AGENT OUTPUT:")
-        print("="*80)
-        print(output)
-        print("="*80 + "\n")
+        _print("\n" + "="*80)
+        _print("COMPOSER AGENT OUTPUT:")
+        _print("="*80)
+        _print(output)
+        _print("="*80 + "\n")
         return output
 
 
@@ -955,11 +1031,11 @@ def execute_with_specialist(prompt: str, category: str, interactive: bool = Fals
         category: Task category (frontend, backend, cloud, full-stack, other)
         interactive: If True, run in interactive mode (opens Cursor UI)
     """
-    print(f"\n🚀 Phase 2: Executing with {category} specialist agent(s)...\n")
+    _print(f"\n🚀 Phase 2: Executing with {category} specialist agent(s)...\n")
     
     if category == "full-stack":
         # Execute backend first, then frontend
-        print("📦 Step 2a: Backend Architecture...")
+        _print("📦 Step 2a: Backend Architecture...")
         backend_agent = AGENTS["backend"]
         backend_instructions = load_agent_instructions(backend_agent["file"], workspace_dir)
         
@@ -975,11 +1051,15 @@ Provide:
 """
         
         if interactive:
-            print("Opening backend agent in Cursor...")
-            subprocess.run(
-                ["cursor", "agent", "--model", backend_agent["model"], backend_prompt],
-                cwd=str(workspace_dir) if workspace_dir else None
-            )
+            _print("Opening backend agent in Cursor...")
+            try:
+                cursor_agent = find_cursor_agent()
+                subprocess.run(
+                    [cursor_agent, "--model", backend_agent["model"], backend_prompt],
+                    cwd=str(workspace_dir) if workspace_dir else None
+                )
+            except FileNotFoundError as e:
+                _print(f"Error: {e}", file=sys.stderr)
         else:
             output = run_cursor_agent(
                 backend_prompt,
@@ -987,13 +1067,13 @@ Provide:
                 model=backend_agent["model"],
                 workspace_dir=workspace_dir
             )
-            print("\n" + "="*80)
-            print("BACKEND ARCHITECT OUTPUT:")
-            print("="*80)
-            print(output)
-            print("="*80 + "\n")
+            _print("\n" + "="*80)
+            _print("BACKEND ARCHITECT OUTPUT:")
+            _print("="*80)
+            _print(output)
+            _print("="*80 + "\n")
         
-        print("\n🎨 Step 2b: Frontend Implementation...")
+        _print("\n🎨 Step 2b: Frontend Implementation...")
         frontend_agent = AGENTS["frontend"]
         frontend_instructions = load_agent_instructions(frontend_agent["file"], workspace_dir)
         
@@ -1009,11 +1089,15 @@ Provide:
 """
         
         if interactive:
-            print("Opening frontend agent in Cursor...")
-            subprocess.run(
-                ["cursor", "agent", "--model", frontend_agent["model"], frontend_prompt],
-                cwd=str(workspace_dir) if workspace_dir else None
-            )
+            _print("Opening frontend agent in Cursor...")
+            try:
+                cursor_agent = find_cursor_agent()
+                subprocess.run(
+                    [cursor_agent, "--model", frontend_agent["model"], frontend_prompt],
+                    cwd=str(workspace_dir) if workspace_dir else None
+                )
+            except FileNotFoundError as e:
+                _print(f"Error: {e}", file=sys.stderr)
         else:
             output = run_cursor_agent(
                 frontend_prompt,
@@ -1021,11 +1105,11 @@ Provide:
                 model=frontend_agent["model"],
                 workspace_dir=workspace_dir
             )
-            print("\n" + "="*80)
-            print("FRONTEND DEVELOPER OUTPUT:")
-            print("="*80)
-            print(output)
-            print("="*80 + "\n")
+            _print("\n" + "="*80)
+            _print("FRONTEND DEVELOPER OUTPUT:")
+            _print("="*80)
+            _print(output)
+            _print("="*80 + "\n")
         
         # Run composer to validate backend + frontend integration
         compose_integration(
@@ -1040,11 +1124,15 @@ Provide:
         agent_instructions = load_agent_instructions(agent["file"], workspace_dir)
         
         if interactive:
-            print(f"Opening {agent['name']} agent in Cursor...")
-            subprocess.run(
-                ["cursor", "agent", "--model", agent["model"], prompt],
-                cwd=str(workspace_dir) if workspace_dir else None
-            )
+            _print(f"Opening {agent['name']} agent in Cursor...")
+            try:
+                cursor_agent = find_cursor_agent()
+                subprocess.run(
+                    [cursor_agent, "--model", agent["model"], prompt],
+                    cwd=str(workspace_dir) if workspace_dir else None
+                )
+            except FileNotFoundError as e:
+                _print(f"Error: {e}", file=sys.stderr)
         else:
             output = run_cursor_agent(
                 prompt,
@@ -1052,25 +1140,29 @@ Provide:
                 model=agent["model"],
                 workspace_dir=workspace_dir
             )
-            print("\n" + "="*80)
-            print(f"{agent['name'].upper().replace('-', ' ')} OUTPUT:")
-            print("="*80)
-            print(output)
-            print("="*80 + "\n")
+            _print("\n" + "="*80)
+            _print(f"{agent['name'].upper().replace('-', ' ')} OUTPUT:")
+            _print("="*80)
+            _print(output)
+            _print("="*80 + "\n")
     else:
-        print(f"⚠️  Unknown category '{category}'. Running with default agent...")
+        _print(f"⚠️  Unknown category '{category}'. Running with default agent...")
         if interactive:
-            subprocess.run(
-                ["cursor", "agent", prompt],
-                cwd=str(workspace_dir) if workspace_dir else None
-            )
+            try:
+                cursor_agent = find_cursor_agent()
+                subprocess.run(
+                    [cursor_agent, prompt],
+                    cwd=str(workspace_dir) if workspace_dir else None
+                )
+            except FileNotFoundError as e:
+                _print(f"Error: {e}", file=sys.stderr)
         else:
             output = run_cursor_agent(prompt, workspace_dir=workspace_dir)
-            print("\n" + "="*80)
-            print("AGENT OUTPUT:")
-            print("="*80)
-            print(output)
-            print("="*80 + "\n")
+            _print("\n" + "="*80)
+            _print("AGENT OUTPUT:")
+            _print("="*80)
+            _print(output)
+            _print("="*80 + "\n")
 
 
 def main():
@@ -1149,60 +1241,60 @@ Examples:
     if args.workspace:
         workspace_dir = Path(args.workspace).resolve()
         if not workspace_dir.exists():
-            print(f"Error: Workspace directory does not exist: {workspace_dir}", file=sys.stderr)
+            _print(f"Error: Workspace directory does not exist: {workspace_dir}", file=sys.stderr)
             sys.exit(1)
         if not workspace_dir.is_dir():
-            print(f"Error: Workspace path is not a directory: {workspace_dir}", file=sys.stderr)
+            _print(f"Error: Workspace path is not a directory: {workspace_dir}", file=sys.stderr)
             sys.exit(1)
     else:
         # Default: parent of .cursor directory (where script is located)
         workspace_dir = Path(__file__).parent.parent.resolve()
     
-    print(f"📁 Workspace: {workspace_dir}")
-    print(f"📁 Agent will have access to codebase in: {workspace_dir}\n")
+    _print(f"📁 Workspace: {workspace_dir}")
+    _print(f"📁 Agent will have access to codebase in: {workspace_dir}\n")
     
-    print("="*80)
-    print("CURSOR AGENT CHAIN ORCHESTRATOR")
-    print("="*80)
-    print(f"Initial Prompt: {args.prompt}\n")
+    _print("="*80)
+    _print("CURSOR AGENT CHAIN ORCHESTRATOR")
+    _print("="*80)
+    _print(f"Initial Prompt: {args.prompt}\n")
     
     # Plan creation phase (if requested)
     plan_path = None
     if args.plan or args.plan_only:
         plan_path = create_plan(args.prompt, workspace_dir=workspace_dir)
         if args.plan_only:
-            print("\n" + "="*80)
-            print("✅ Plan-only mode: Exiting after plan creation")
-            print("="*80)
+            _print("\n" + "="*80)
+            _print("✅ Plan-only mode: Exiting after plan creation")
+            _print("="*80)
             return
     
     # Phase 0: Splitter agent (unless skipped)
     splitter_result = None
     if not args.skip_splitter and not args.skip_prompt_engineering and not args.category:
         splitter_result = split_task(args.prompt, workspace_dir=workspace_dir)
-        print(f"\n✅ Splitter Analysis:")
-        print(f"   Requires multiple agents: {splitter_result.get('requires_multiple_agents', False)}")
-        print(f"   Agents needed: {', '.join(splitter_result.get('agents_needed', []))}")
-        print(f"   Strategy: {splitter_result.get('execution_strategy', 'sequential')}")
-        print(f"   Summary: {splitter_result.get('summary', 'N/A')}\n")
+        _print(f"\n✅ Splitter Analysis:")
+        _print(f"   Requires multiple agents: {splitter_result.get('requires_multiple_agents', False)}")
+        _print(f"   Agents needed: {', '.join(splitter_result.get('agents_needed', []))}")
+        _print(f"   Strategy: {splitter_result.get('execution_strategy', 'sequential')}")
+        _print(f"   Summary: {splitter_result.get('summary', 'N/A')}\n")
     
     # Phase 0.5: Interactive Clarification (unless skipped)
     clarified_prompt = args.prompt
     if not args.skip_clarification and not args.skip_prompt_engineering and not args.category:
         clarified_prompt = interactive_clarification(args.prompt, workspace_dir=workspace_dir)
-        print(f"✅ Clarified Prompt: {clarified_prompt[:200]}...\n" if len(clarified_prompt) > 200 else f"✅ Clarified Prompt: {clarified_prompt}\n")
+        _print(f"✅ Clarified Prompt: {clarified_prompt[:200]}...\n" if len(clarified_prompt) > 200 else f"✅ Clarified Prompt: {clarified_prompt}\n")
     elif args.skip_clarification:
-        print("⏭️  Skipping clarification phase.\n")
+        _print("⏭️  Skipping clarification phase.\n")
     
     # Phase 1: Prompt engineering (unless skipped)
     if args.skip_prompt_engineering or args.category:
         perfected_prompt = clarified_prompt
         category = args.category or "other"
-        print(f"⏭️  Skipping prompt engineering. Using category: {category}")
+        _print(f"⏭️  Skipping prompt engineering. Using category: {category}")
     else:
         perfected_prompt, category = perfect_prompt(clarified_prompt, workspace_dir=workspace_dir)
-        print(f"\n✅ Categorized as: {category}")
-        print(f"✅ Perfected Prompt: {perfected_prompt}\n")
+        _print(f"\n✅ Categorized as: {category}")
+        _print(f"✅ Perfected Prompt: {perfected_prompt}\n")
     
     # Phase 2: Execute agents
     # When multiple agents are detected, always create plans for each agent
@@ -1223,9 +1315,9 @@ Examples:
         execute_with_specialist(perfected_prompt, category, interactive=args.interactive, 
                                workspace_dir=workspace_dir)
     
-    print("\n" + "="*80)
-    print("✅ Agent chain completed!")
-    print("="*80)
+    _print("\n" + "="*80)
+    _print("✅ Agent chain completed!")
+    _print("="*80)
 
 
 if __name__ == "__main__":

@@ -468,9 +468,10 @@ async def run_agent_chain(args: dict) -> list[TextContent]:
     detected_category = category if category != "auto" else "other"
     
     if not skip_prompt_engineering:
-        log_progress("PHASE 1", "Running prompt optimization (Prompt Engineer Agent)...")
-        perfected, detected_category = await asyncio.to_thread(perfect_prompt, prompt, workspace_dir)
-        log_progress("PHASE 1", f"Complete - Category: {detected_category}")
+        results.append("\n---\n## Phase 1: Prompt Engineering\n")
+        perfected, detected_category = await asyncio.to_thread(perfect_prompt, prompt, WORKSPACE_DIR)
+        results.append(f"**Optimized prompt:** {perfected[:500]}{'...' if len(perfected) > 500 else ''}\n")
+        results.append(f"**Category:** {detected_category}\n")
     
     # Phase 2: Specialist Execution
     log_progress("PHASE 2", "Starting specialist agent execution...")

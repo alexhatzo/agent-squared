@@ -90,6 +90,39 @@ async def list_tools() -> list[Tool]:
     agent_list = ac.agents_cache + ac.additional_agents_cache + ["composer"]
 
     return [
+        # =====================================================================
+        # MAIN ENTRY POINT - Use this to invoke Agent²
+        # =====================================================================
+        Tool(
+            name=ToolName.AGENT_SQUARED.value,
+            description="""🤖 Agent² - Multi-Agent Development Orchestrator
+
+USE THIS TOOL when the user says "use agent_squared to..." or wants to run complex development tasks.
+
+Agent² chains specialized AI agents together:
+• Splitter analyzes what specialists are needed
+• Prompt Engineer optimizes the task description  
+• Specialist agents execute the work (frontend, backend, cloud, etc.)
+• Composer validates integration between agents
+
+Just pass the task and workspace_dir. Agent² handles the rest!
+
+Example: "Use agent_squared to build a REST API with JWT authentication"
+""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "task": {"type": "string", "description": "What you want to build or accomplish"},
+                    "workspace_dir": {"type": "string", "description": "Path to the project workspace"},
+                },
+                "required": ["task", "workspace_dir"],
+            },
+        ),
+        
+        # =====================================================================
+        # STEP-BY-STEP PIPELINE (for more control)
+        # =====================================================================
+        
         # Step 1: Split Task
         Tool(
             name=ToolName.SPLIT_TASK.value,

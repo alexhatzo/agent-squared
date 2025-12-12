@@ -104,6 +104,44 @@ Or test the connection first:
 | `data-engineer` | Data pipelines, ETL, analytics |
 | `deployment-engineer` | CI/CD, containers, orchestration |
 
+### Adding Custom Agents
+
+You can add your own specialized agents by creating `.md` files in the `agents/` folder. Any markdown file not already mapped to a built-in agent will be automatically discovered.
+
+**1. Create your agent file:**
+
+```bash
+# Create agents/my-agent.md
+touch agents/my-agent.md
+```
+
+**2. Add frontmatter and instructions:**
+
+```markdown
+---
+name: my-agent
+description: Brief description of what your agent does (used by the splitter)
+tools: Read, Write, Edit, Bash
+model: sonnet
+---
+
+You are a specialist in [your domain].
+
+When given a task, you should:
+1. [Your approach]
+2. [Your approach]
+
+[Additional instructions...]
+```
+
+**3. Restart Cursor** to reload the MCP server
+
+**4. Verify it's discovered:**
+
+> "Use list_agents to show available agents"
+
+Your custom agent will appear under **Custom Agents** and the splitter will automatically recommend it when relevant based on your description.
+
 ---
 
 ## MCP Tools Reference
@@ -203,7 +241,7 @@ Single prompts hit walls on complex tasks. By decomposing work across specialize
 
 ### "Agent execution timed out"
 
-1. Run `test_cursor_cli` to check your setup
+1. Run `test_cursor_mcp` to check your setup
 2. Verify your `CURSOR_API_KEY` is valid
 3. Check that `cursor-agent` is installed: `which cursor-agent`
 

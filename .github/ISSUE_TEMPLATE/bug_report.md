@@ -24,12 +24,12 @@ What actually happened.
 - OS: 
 - Python version: 
 - Cursor version: 
+- Agent² version/commit: 
 
 ## Logs
 ```
-Paste any relevant error logs here
+Paste any relevant logs or error messages here
 ```
 
 ## Additional Context
 Any other context about the problem.
-

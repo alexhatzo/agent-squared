@@ -63,22 +63,26 @@ In Cursor chat, just say:
 
 Or test the connection first:
 
-> **"Use test_cursor_cli to check if agent_squared is working"**
+> **"Use test_cursor_mcp to check if agent_squared is working"**
 
 ---
 
 ## Usage Examples
 
 ### Simple Task
+>
 > "Use agent_squared to add dark mode toggle to the settings page"
 
 ### Complex Full-Stack Task
+>
 > "Use agent_squared to build a user dashboard with:
+>
 > - Backend API for user stats
 > - React frontend with charts
 > - Authentication middleware"
 
 ### Infrastructure Task
+>
 > "Use agent_squared to set up CI/CD pipeline with GitHub Actions and deploy to AWS ECS"
 
 ---
@@ -110,7 +114,7 @@ Or test the connection first:
 | `run_specialist` | Run a specific agent |
 | `compose_agents` | Validate multi-agent integration |
 | `list_agents` | Show available specialists |
-| `test_cursor_cli` | Diagnose connection issues |
+| `test_cursor_mcp` | Diagnose connection issues |
 
 ### Step-by-Step Control
 
@@ -204,6 +208,7 @@ Single prompts hit walls on complex tasks. By decomposing work across specialize
 ### "cursor-agent not found"
 
 Install the Cursor CLI:
+
 ```bash
 curl https://cursor.com/install -fsS | bash
 ```

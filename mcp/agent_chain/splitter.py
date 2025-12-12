@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from agent_chain.agents import SPLITTER_AGENT, get_all_agent_names
+from agent_chain.agents import SPLITTER_AGENT, get_all_agent_names, get_all_agents_with_descriptions
 from agent_chain.core import run_cursor_agent, load_agent_instructions, agent_print
 
 
@@ -74,20 +74,21 @@ def split_task(initial_prompt: str, workspace_dir: Path | None = None) -> dict[s
     # Load splitter agent instructions
     splitter_instructions = load_agent_instructions(SPLITTER_AGENT["file"], workspace_dir)
     
-    # Get available agent names to include in the prompt
-    available_agents = get_all_agent_names()
-    agents_list = ", ".join(available_agents)
+    # Get available agents with descriptions for the splitter
+    agents_with_desc = get_all_agents_with_descriptions()
+    agents_list = "\n".join([f"- **{name}**: {desc}" for name, desc in agents_with_desc])
+    agent_names = [name for name, _ in agents_with_desc]
 
     splitter_prompt = f"""Analyze this user prompt and determine which specialized agents are needed:
 
 "{initial_prompt}"
 
-AVAILABLE AGENTS (you MUST use these exact names):
+AVAILABLE AGENTS (use these exact names):
 {agents_list}
 
 Output your analysis in the required JSON format with:
 - requires_multiple_agents (true/false)
-- agents_needed (list of agent names - MUST be from the available agents above)
+- agents_needed (list of agent names - MUST be from: {', '.join(agent_names)})
 - execution_strategy ("sequential" or "parallel")
 - execution_order (list with "agent" field using EXACT agent names from above, plus "focus" describing what that agent should do)
 - dependencies (if any)

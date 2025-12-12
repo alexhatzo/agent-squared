@@ -2,24 +2,31 @@
 name: New Agent Proposal
 about: Propose a new specialist agent
 title: '[AGENT] '
-labels: new-agent
+labels: agent
 assignees: ''
 ---
 
 ## Agent Name
-What should this agent be called?
+What should the agent be called? (e.g., `security-engineer`)
 
 ## Specialization
-What domain or task type should this agent focus on?
+What domain/expertise should this agent have?
 
 ## Use Cases
-- 
-- 
-- 
+When would someone use this agent? Provide 2-3 example tasks.
 
-## Suggested Instructions
-What kind of instructions/context should this agent have?
+## Example Instructions
+Draft instructions for the agent (can be rough):
 
-## Related Agents
-Does this overlap with or complement existing agents?
+```markdown
+You are a [role] specialist. Your expertise includes:
+- [skill 1]
+- [skill 2]
 
+When given a task, you should:
+1. [approach]
+2. [approach]
+```
+
+## Similar Agents
+Are there existing agents that overlap? How is this different?

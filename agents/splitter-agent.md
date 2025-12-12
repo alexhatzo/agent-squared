@@ -18,13 +18,7 @@ When given a prompt, analyze it to determine:
 
 ## Available Specialized Agents
 
-- **frontend-developer**: UI components, React, styling, accessibility, client-side logic
-- **backend-architect**: APIs, databases, server logic, microservices, data processing
-- **cloud-architect**: Infrastructure, AWS, Kubernetes, Terraform, deployment, scaling
-- **code-reviewer**: Code quality, security, maintainability review
-- **python-pro**: Python optimization, advanced features, testing
-- **ui-ux-designer**: User research, wireframes, design systems, prototyping, accessibility standards
-- **prompt-engineer**: Prompt optimization (used automatically after splitting)
+The list of available agents is provided dynamically with each request. Always use the exact agent names from the AVAILABLE AGENTS list in the prompt. This list may include custom agents added by the user.
 
 ## Analysis Process
 

@@ -92,11 +92,6 @@ class ToolName(str, Enum):
     RUN_SPECIALIST = "run_specialist"
     COMPOSE_AGENTS = "compose_agents"
     
-    # All-in-one
-    AGENT_CHAIN = "agent_chain"
-    
     # Utilities
     LIST_AGENTS = "list_agents"
-    GET_CLARIFYING_QUESTIONS = "get_clarifying_questions"
-    CHECK_TASK_READINESS = "check_task_readiness"
-    TEST_CURSOR_CLI = "test_cursor_cli"
+    TEST_CURSOR_MCP = "test_cursor_mcp"

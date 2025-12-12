@@ -2,13 +2,13 @@
 """
 Agent² MCP Server
 
-Exposes the agent chain as an MCP tool that Cursor can call.
-This allows the built-in Cursor chat to route prompts through your multi-agent pipeline.
+Exposes multi-agent orchestration tools that Cursor can call.
+This allows the built-in Cursor chat to route prompts through specialized AI agents.
 
 Setup:
     1. Install dependencies: pip install mcp
     2. Add to Cursor's MCP config (see below)
-    3. Use the "agent_chain" tool in chat
+    3. Say "Use agent_squared to [your task]" in chat
 
 Cursor MCP Config (~/.cursor/mcp.json):
     {
@@ -67,6 +67,14 @@ from tools.pipeline import ensure_agent_chain_imported
 # ==============================================================================
 
 server = Server("agent-squared")
+
+
+# ==============================================================================
+# TOKEN WARNING
+# ==============================================================================
+
+TOKEN_WARNING = """
+⚠️ **TOKEN USAGE WARNING**: This tool invokes the cursor-agent CLI which consumes tokens from your Cursor subscription. Complex tasks with multiple agents can use significant tokens."""
 
 
 # ==============================================================================
@@ -193,65 +201,21 @@ Only needed when split_task identified multiple agents.""",
                 "required": ["agents_used", "prompt", "workspace_dir"],
             },
         ),
+        
+        # =====================================================================
+        # UTILITIES
+        # =====================================================================
+        
         # List Agents
         Tool(
             name=ToolName.LIST_AGENTS.value,
             description="List all available specialist agents and their capabilities.",
             inputSchema={"type": "object", "properties": {}},
         ),
-        # All-in-one Agent Chain
+        # Diagnostic: Test MCP
         Tool(
-            name=ToolName.AGENT_CHAIN.value,
-            description="""[ALTERNATIVE] Run the entire Agent² pipeline in one call.
-
-For better visibility, prefer the step-by-step approach.
-This tool runs everything internally without intermediate visibility.""",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "prompt": {"type": "string", "description": "The task to process"},
-                    "workspace_dir": {"type": "string", "description": "Path to the project workspace"},
-                    "skip_splitter": {"type": "boolean", "default": False},
-                    "skip_prompt_engineering": {"type": "boolean", "default": False},
-                    "category": {"type": "string", "enum": ["frontend", "backend", "cloud", "full-stack", "auto"], "default": "auto"},
-                },
-                "required": ["prompt", "workspace_dir"],
-            },
-        ),
-        # Utility: Clarifying Questions
-        Tool(
-            name=ToolName.GET_CLARIFYING_QUESTIONS.value,
-            description="""Analyze a task and generate clarifying questions before execution.
-
-Use this BEFORE starting the pipeline when you want to gather more information.""",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "prompt": {"type": "string", "description": "The initial task prompt"},
-                    "previous_answers": {"type": "object", "additionalProperties": {"type": "string"}},
-                },
-                "required": ["prompt"],
-            },
-        ),
-        # Utility: Check Readiness
-        Tool(
-            name=ToolName.CHECK_TASK_READINESS.value,
-            description="""Check if enough information has been gathered to proceed with a task.
-
-Use after gathering answers to clarifying questions.""",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "prompt": {"type": "string", "description": "The original task prompt"},
-                    "answers": {"type": "object", "additionalProperties": {"type": "string"}},
-                },
-                "required": ["prompt", "answers"],
-            },
-        ),
-        # Diagnostic: Test CLI
-        Tool(
-            name=ToolName.TEST_CURSOR_CLI.value,
-            description="""Test if Cursor CLI is working and authenticated.
+            name=ToolName.TEST_CURSOR_MCP.value,
+            description="""Test if Cursor CLI is working and the MCP server is properly configured.
 
 Use this to diagnose issues when other tools are timing out or failing.""",
             inputSchema={"type": "object", "properties": {}},

@@ -1,6 +1,15 @@
-mcp
-boto3
+# Agent² MCP Server Dependencies
+# ================================
 
+# Core MCP server library
+mcp>=1.0.0
 
+# AWS SDK (optional, for cloud agent features)
+boto3>=1.34.0
+
+# Development dependencies (optional)
+# pytest>=8.0.0
+# mypy>=1.8.0
+# ruff>=0.2.0
 
 

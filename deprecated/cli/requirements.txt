@@ -1,0 +1,18 @@
+# Agent² CLI Requirements
+# No external dependencies required - uses only Python standard library
+
+# The CLI uses:
+# - subprocess: For running cursor-agent commands
+# - argparse: For CLI argument parsing
+# - pathlib: For path handling
+# - json: For JSON parsing
+# - re: For regex pattern matching
+# - uuid: For generating unique IDs
+# - datetime: For timestamps
+# - dataclasses: For structured data types
+# - typing: For type hints
+# - shutil: For finding executables
+# - os: For environment variables
+# - sys: For system operations
+
+# All above are part of Python standard library (3.10+)

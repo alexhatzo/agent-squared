@@ -1,36 +1,37 @@
-#!/usr/bin/env python3
 """
-Agent Chain Orchestrator - Backward Compatible Entry Point
+Agent Chain package for Agent² system.
 
-This module provides backward compatibility for importing from agent_chain.
-All functionality has been moved to the agent_chain/ package.
+This package provides the multi-agent orchestration functionality:
+- Task splitting and analysis
+- Prompt engineering and optimization
+- Specialist agent execution
+- Multi-agent composition and integration
 
-Usage:
-    # CLI usage
-    python agent_chain.py "Your prompt here"
-    
-    # Programmatic usage  
+Example usage:
     from agent_chain import split_task, perfect_prompt, execute_agent
+    
+    # Analyze task
+    result = split_task("Build a todo app")
+    
+    # Optimize prompt
+    perfected, category = perfect_prompt("Build a todo app")
+    
+    # Execute agent
+    output = execute_agent("frontend", perfected)
 """
 
-from __future__ import annotations
-
-import sys
-from pathlib import Path
-
-# Add parent directory to path for package imports
-sys.path.insert(0, str(Path(__file__).parent))
-
-# Re-export everything from the agent_chain package for backward compatibility
-from agent_chain import (
-    # Core functions
+# Core functions
+from agent_chain.core import (
     set_mcp_mode,
     is_mcp_mode,
     run_cursor_agent,
     run_cursor_agent_detailed,
     load_agent_instructions,
     find_cursor_agent,
-    # Agent definitions
+)
+
+# Agent definitions
+from agent_chain.agents import (
     AGENTS,
     ADDITIONAL_AGENTS,
     SPLITTER_AGENT,
@@ -38,24 +39,28 @@ from agent_chain import (
     COMPOSER_AGENT,
     get_agent_config,
     get_all_agent_names,
-    # Splitter
-    split_task,
-    SplitterResult,
-    # Prompt engineering
+)
+
+# Splitter functions
+from agent_chain.splitter import split_task, SplitterResult
+
+# Prompt engineering functions
+from agent_chain.prompt_engineer import (
     perfect_prompt,
     generate_clarification_questions,
     has_enough_info,
-    # Executor
+)
+
+# Executor functions
+from agent_chain.executor import (
     execute_agent,
     execute_multiple_agents,
     execute_with_specialist,
     compose_integration,
-    # Planner
-    create_plan,
 )
 
-# For CLI usage
-from agent_chain.cli import main, interactive_clarification
+# Planner functions
+from agent_chain.planner import create_plan
 
 __all__ = [
     # Core
@@ -87,10 +92,4 @@ __all__ = [
     "compose_integration",
     # Planner
     "create_plan",
-    # CLI
-    "main",
-    "interactive_clarification",
 ]
-
-if __name__ == "__main__":
-    main()

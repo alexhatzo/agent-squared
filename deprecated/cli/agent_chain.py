@@ -8,9 +8,15 @@ All functionality has been moved to the agent_chain/ package.
 Usage:
     # CLI usage
     python agent_chain.py "Your prompt here"
+    python agent_chain.py --test-cli
+    python agent_chain.py --list-agents
     
     # Programmatic usage  
     from agent_chain import split_task, perfect_prompt, execute_agent
+
+Environment Variables:
+    CURSOR_API_KEY: API key for Cursor CLI authentication
+    CURSOR_MODEL: Model to use for all agents (default: composer-1)
 """
 
 from __future__ import annotations
@@ -18,14 +24,12 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# Add parent directory to path for package imports
+# Add cli directory to path for package imports
 sys.path.insert(0, str(Path(__file__).parent))
 
 # Re-export everything from the agent_chain package for backward compatibility
 from agent_chain import (
     # Core functions
-    set_mcp_mode,
-    is_mcp_mode,
     run_cursor_agent,
     run_cursor_agent_detailed,
     load_agent_instructions,
@@ -55,12 +59,10 @@ from agent_chain import (
 )
 
 # For CLI usage
-from agent_chain.cli import main, interactive_clarification
+from agent_chain.cli import main, interactive_clarification, test_cursor_cli, list_agents
 
 __all__ = [
     # Core
-    "set_mcp_mode",
-    "is_mcp_mode",
     "run_cursor_agent",
     "run_cursor_agent_detailed",
     "load_agent_instructions",
@@ -90,6 +92,8 @@ __all__ = [
     # CLI
     "main",
     "interactive_clarification",
+    "test_cursor_cli",
+    "list_agents",
 ]
 
 if __name__ == "__main__":

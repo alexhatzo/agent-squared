@@ -2,7 +2,7 @@
 Diagnostic tool handlers for Agent² MCP Server.
 
 Diagnostic tools:
-- run_test_cursor_cli: Test Cursor CLI connectivity
+- run_test_cursor_mcp: Test MCP server and Cursor CLI connectivity
 """
 
 from __future__ import annotations
@@ -24,13 +24,13 @@ from utils.helpers import mask_api_key, find_cursor_agent, get_mcp_config_exampl
 logger = logging.getLogger("agent-squared-mcp")
 
 
-@register_tool(ToolName.TEST_CURSOR_CLI)
-async def run_test_cursor_cli(args: dict[str, Any]) -> list[TextContent]:
-    """Test if Cursor CLI is working and API key is configured."""
+@register_tool(ToolName.TEST_CURSOR_MCP)
+async def run_test_cursor_mcp(args: dict[str, Any]) -> list[TextContent]:
+    """Test if the MCP server is properly configured and Cursor CLI is working."""
     from config import get_model
     
     output = OutputBuilder()
-    output.header("Cursor CLI Diagnostic")
+    output.header("Agent² MCP Diagnostic")
     output.blank()
 
     # Show configured model

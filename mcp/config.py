@@ -83,12 +83,15 @@ DEFAULT_TIMEOUT = 600
 class ToolName(str, Enum):
     """Enumeration of available tool names for type safety."""
 
+    # Main entry point
+    AGENT_SQUARED = "agent_squared"
+    
+    # Pipeline steps
     SPLIT_TASK = "split_task"
     PERFECT_PROMPT = "perfect_prompt"
     RUN_SPECIALIST = "run_specialist"
     COMPOSE_AGENTS = "compose_agents"
+    
+    # Utilities
     LIST_AGENTS = "list_agents"
-    AGENT_CHAIN = "agent_chain"
-    GET_CLARIFYING_QUESTIONS = "get_clarifying_questions"
-    CHECK_TASK_READINESS = "check_task_readiness"
-    TEST_CURSOR_CLI = "test_cursor_cli"
+    TEST_CURSOR_MCP = "test_cursor_mcp"

@@ -1,129 +1,159 @@
 # Agent² (Agent Squared)
 
-> Meta-orchestration layer that chains specialized AI agents together for complex development workflows.
+> Multi-agent orchestration for Cursor – chain specialized AI agents together for complex development workflows.
 
-## How It Works
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+
+## What is Agent²?
+
+Agent² is an MCP (Model Context Protocol) server that extends Cursor with multi-agent capabilities. Instead of handling everything with a single prompt, Agent² intelligently routes your task through specialized agents:
 
 ```
-Your Prompt → Splitter → Prompt Engineer → Specialist Agent(s) → Composer → Result
-                ↓              ↓                    ↓                ↓
-         Decompose task   Perfect prompt    Execute tasks    Validate integration
+Your Task → Splitter → Prompt Engineer → Specialist Agent(s) → Composer → Result
+              ↓              ↓                    ↓                ↓
+        Decompose       Optimize           Execute work      Validate
+        the task        the prompt         (frontend,        integration
+                                           backend, etc.)
 ```
 
-When multiple agents are used, the **Composer** agent runs at the end to:
-- Verify API contracts between frontend/backend
-- Check data flow consistency
-- Fix integration issues
-- Add any missing glue code
+## Quick Start
 
----
-
-## MCP Integration (Cursor Chat)
-
-**Use Agent² directly in Cursor's built-in chat!**
-
-### Setup
-
-1. **Install MCP library:**
-   ```bash
-   pip install -r mcp/requirements.txt
-   ```
-
-2. **Generate a Cursor API Key:**
-   - Open Cursor Settings
-   - Navigate to API Keys section
-   - Generate a new API key
-
-3. **Add to Cursor's MCP config** (`~/.cursor/mcp.json`):
-   ```json
-   {
-     "mcpServers": {
-       "agent-squared": {
-         "command": "python",
-         "args": ["/path/to/agent-squared/mcp/mcp_server.py"],
-         "env": {
-           "CURSOR_API_KEY": "your-cursor-api-key-here"
-         }
-       }
-     }
-   }
-   ```
-
-4. **Restart Cursor** to load the MCP server.
-
-5. **Test the connection:**
-   > "Use test_cursor_cli to check if everything is working"
-
-### Usage in Chat
-
-Once configured, you can use these tools in Cursor chat:
-
-| Tool | Description |
-|------|-------------|
-| `agent_chain` | Run full pipeline (splitter → prompt engineer → specialists → composer) |
-| `split_task` | Just analyze which agents are needed |
-| `perfect_prompt` | Just optimize a prompt |
-| `run_specialist` | Run a specific agent directly |
-| `list_agents` | Show available specialists |
-| `get_clarifying_questions` | Get questions to ask before executing |
-| `test_cursor_cli` | Diagnose connection and API key issues |
-
-**Example:** Just ask Cursor to use the agent_chain tool:
-> "Use agent_chain to build a REST API with authentication and deploy to AWS"
-
----
-
-## CLI Tool
-
-For terminal usage without MCP integration.
-
-### Quick Start
+### 1. Install Dependencies
 
 ```bash
-# Run from your project directory
-cd cli
-./chain-agents.sh "Build a login page with authentication"
-
-# Or directly with Python
-python cli/agent_chain.py "Create a REST API for user management"
-
-# Interactive mode (opens Cursor UI)
-python cli/agent_chain.py "Create a REST API" --interactive
-
-# Plan-only mode (create plan without execution)
-python cli/agent_chain.py "Design a microservices architecture" --plan-only
+cd mcp
+pip install -r requirements.txt
 ```
 
-### CLI Options
+### 2. Get Your Cursor API Key
 
+1. Open **Cursor Settings** (Cmd/Ctrl + ,)
+2. Go to **Features** → **API Keys**
+3. Generate a new API key
+
+### 3. Configure MCP
+
+Add to your Cursor MCP config at `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "agent-squared": {
+      "command": "python",
+      "args": ["/path/to/agent-squared/mcp/mcp_server.py"],
+      "env": {
+        "CURSOR_API_KEY": "your-cursor-api-key-here",
+        "CURSOR_MODEL": "composer-1"
+      }
+    }
+  }
+}
 ```
---interactive              Opens Cursor UI for each agent
---skip-splitter           Skip task decomposition
---skip-prompt-engineering Skip prompt optimization
---skip-clarification      Skip interactive Q&A phase
---category CATEGORY       Force category (frontend|backend|cloud|full-stack|other)
---workspace DIR           Specify project directory
---plan                    Create plan document before execution
---plan-only               Only create plan, don't execute
-```
+
+### 4. Restart Cursor
+
+Restart Cursor to load the MCP server.
+
+### 5. Start Using Agent²
+
+In Cursor chat, just say:
+
+> **"Use agent_squared to build a REST API with authentication"**
+
+Or test the connection first:
+
+> **"Use test_cursor_mcp to check if agent_squared is working"**
+
+---
+
+## Usage Examples
+
+### Simple Task
+>
+> "Use agent_squared to add dark mode toggle to the settings page"
+
+### Complex Full-Stack Task
+>
+> "Use agent_squared to build a user dashboard with:
+>
+> - Backend API for user stats
+> - React frontend with charts
+> - Authentication middleware"
+
+### Infrastructure Task
+>
+> "Use agent_squared to set up CI/CD pipeline with GitHub Actions and deploy to AWS ECS"
 
 ---
 
 ## Available Agents
 
-| Agent | Focus |
-|-------|-------|
-| `frontend-developer` | React, UI components, styling, accessibility |
-| `backend-architect` | APIs, databases, microservices |
-| `cloud-architect` | AWS, Terraform, Kubernetes, deployment |
-| `code-reviewer` | Code quality, security, maintainability |
-| `python-pro` | Python optimization, testing, async |
+| Agent | Specialization |
+|-------|----------------|
+| `frontend` | React, UI components, styling, accessibility |
+| `backend` | APIs, databases, microservices, server logic |
+| `cloud` | AWS, Terraform, Kubernetes, deployment |
+| `code-reviewer` | Code quality, security review, best practices |
+| `python-pro` | Python optimization, async patterns, testing |
 | `ui-ux-designer` | User research, wireframes, design systems |
 | `security-engineer` | API security, audits, compliance |
-| `ai-engineer` | LLM integration, RAG systems, agents |
+| `ai-engineer` | LLM integration, RAG systems, AI agents |
 | `data-engineer` | Data pipelines, ETL, analytics |
 | `deployment-engineer` | CI/CD, containers, orchestration |
-| `composer` | Integration validation (auto-runs after multi-agent tasks) |
+
+---
+
+## MCP Tools Reference
+
+| Tool | Description |
+|------|-------------|
+| `agent_squared` | **Main entry point** – just describe your task |
+| `split_task` | Analyze which agents are needed |
+| `perfect_prompt` | Optimize a prompt |
+| `run_specialist` | Run a specific agent |
+| `compose_agents` | Validate multi-agent integration |
+| `list_agents` | Show available specialists |
+| `test_cursor_mcp` | Diagnose connection issues |
+
+### Step-by-Step Control
+
+For more control over the pipeline, you can call tools individually:
+
+1. `split_task` – See which agents are needed
+2. `perfect_prompt` – Optimize the task description
+3. `run_specialist` – Execute each agent
+4. `compose_agents` – Validate integration
+
+---
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `CURSOR_API_KEY` | Yes | Your Cursor API key |
+| `CURSOR_MODEL` | No | Model to use (default: `composer-1`) |
+
+### Custom Model
+
+To use a different model:
+
+```json
+{
+  "mcpServers": {
+    "agent-squared": {
+      "command": "python",
+      "args": ["/path/to/agent-squared/mcp/mcp_server.py"],
+      "env": {
+        "CURSOR_API_KEY": "your-key",
+        "CURSOR_MODEL": "claude-sonnet-4"
+      }
+    }
+  }
+}
+```
 
 ---
 
@@ -131,31 +161,77 @@ python cli/agent_chain.py "Design a microservices architecture" --plan-only
 
 ```
 agent-squared/
-├── cli/                    # CLI tool (uses Cursor CLI directly)
-│   ├── agent_chain.py      # Core orchestrator
-│   └── chain-agents.sh     # Shell wrapper
-├── mcp/                    # MCP server (for Cursor chat integration)
-│   ├── mcp_server.py       # MCP server
-│   ├── agent_chain.py      # Orchestrator for MCP
-│   ├── cursor-mcp-config.json  # Example MCP config
-│   └── requirements.txt    # Python dependencies
-├── agents/                 # Agent definitions (shared)
+├── mcp/                      # MCP server implementation
+│   ├── mcp_server.py         # Main MCP server
+│   ├── agent_chain/          # Agent orchestration logic
+│   ├── tools/                # MCP tool handlers
+│   ├── utils/                # Helper utilities
+│   └── requirements.txt      # Python dependencies
+├── agents/                   # Agent instruction files
 │   ├── splitter-agent.md
 │   ├── prompt-engineer.md
 │   ├── composer.md
-│   └── ... (12+ specialists)
-├── plans/                  # Generated plan documents
-├── plan.md                 # Market analysis
+│   └── ... (specialist agents)
 └── README.md
 ```
 
-## Requirements
+---
 
-- Python 3.7+
-- Cursor CLI (`cursor agent` command)
-- Cursor subscription
-- **For MCP:** Cursor API Key (generate in Cursor Settings)
+## How It Works
+
+### The Pipeline
+
+1. **Splitter Agent** analyzes your task and determines which specialists are needed
+2. **Prompt Engineer** optimizes your prompt for clarity and specificity
+3. **Specialist Agents** execute the actual work (coding, infrastructure, etc.)
+4. **Composer Agent** validates that all pieces integrate correctly
+
+### Why Multi-Agent?
+
+Single prompts hit walls on complex tasks. By decomposing work across specialized agents:
+
+- Each agent has focused expertise and instructions
+- Complex tasks are broken into manageable pieces
+- Integration is explicitly validated
+- You get better results than one-shot prompting
+
+---
+
+## Troubleshooting
+
+### "Agent execution timed out"
+
+1. Run `test_cursor_cli` to check your setup
+2. Verify your `CURSOR_API_KEY` is valid
+3. Check that `cursor-agent` is installed: `which cursor-agent`
+
+### "cursor-agent not found"
+
+Install the Cursor CLI:
+
+```bash
+curl https://cursor.com/install -fsS | bash
+```
+
+### Tools not appearing in Cursor
+
+1. Check `~/.cursor/mcp.json` syntax
+2. Verify the path to `mcp_server.py` is correct
+3. Restart Cursor completely
+
+---
+
+## Contributing
+
+Contributions welcome! Feel free to:
+
+- Add new specialist agents
+- Improve existing agent instructions
+- Fix bugs or improve error handling
+- Add documentation
+
+---
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) for details.

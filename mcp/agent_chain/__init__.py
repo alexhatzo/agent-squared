@@ -39,6 +39,12 @@ from agent_chain.agents import (
     COMPOSER_AGENT,
     get_agent_config,
     get_all_agent_names,
+    get_all_agents_with_descriptions,
+    # Custom agents
+    get_custom_agents,
+    get_custom_agent_names,
+    refresh_custom_agents,
+    get_custom_agents_dir,
 )
 
 # Splitter functions
@@ -78,6 +84,12 @@ __all__ = [
     "COMPOSER_AGENT",
     "get_agent_config",
     "get_all_agent_names",
+    "get_all_agents_with_descriptions",
+    # Custom agents
+    "get_custom_agents",
+    "get_custom_agent_names",
+    "refresh_custom_agents",
+    "get_custom_agents_dir",
     # Splitter
     "split_task",
     "SplitterResult",

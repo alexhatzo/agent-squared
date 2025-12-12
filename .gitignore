@@ -180,3 +180,8 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 mcp/cursor-mcp-config.json
+
+# Agent² specific
+deprecated/
+plans/
+*.plan.md
